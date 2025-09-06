@@ -1,0 +1,18 @@
+name: Link check
+on:
+  schedule:
+    - cron: "30 */12 * * *"
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate affiliate links
+        run: |
+          echo "Checking links..."
+          jq -r '.[].affiliate_url' data/products.json | while read -r url; do
+            code=$(curl -I -sL "$url" | head -n1 | awk '{print $2}')
+            echo "$code $url"
+          done || true
