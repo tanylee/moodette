@@ -1,0 +1,31 @@
+:root{--bg:#fff;--text:#111;--muted:#6b7280;--line:#ececec;--brand:#b07a6b}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;color:var(--text);background:var(--bg)}
+.container{max-width:1040px;margin:0 auto;padding:24px}
+.header{display:flex;justify-content:space-between;align-items:center;padding:8px 0 12px}
+.brand{font-weight:600;letter-spacing:.2px}
+.nav a{margin-left:16px;color:var(--muted);text-decoration:none}
+.grid{display:grid;grid-template-columns:repeat(12,1fr);gap:20px}
+.card,.featured{background:#fff;border:1px solid var(--line);border-radius:16px;overflow:hidden}
+.featured{grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr}
+.featured .visual{display:flex;align-items:center;justify-content:center;background:#fafafa;min-height:360px}
+.featured .visual .tag{border:1px dashed var(--line);padding:14px 18px;border-radius:12px;color:var(--muted)}
+.featured .info{padding:28px}
+.price{font-weight:600;margin:.1rem 0 .8rem}
+.muted{color:var(--muted)}
+.btn{display:inline-block;padding:14px 18px;border-radius:10px;background:var(--brand);color:#fff;text-decoration:none;font-weight:600;transition:opacity .2s}
+.btn:hover{opacity:.9}
+.pill{display:inline-block;border:1px solid var(--line);padding:6px 10px;border-radius:999px;margin:0 8px 8px 0;font-size:.9rem}
+.cards{grid-column:1/-1;display:grid;grid-template-columns:repeat(4,1fr);gap:18px}
+.card img{width:100%;height:260px;object-fit:cover}
+.card .visual{height:160px;background:#fafafa;display:flex;align-items:center;justify-content:center}
+.card .visual .tag{border:1px dashed var(--line);padding:10px 12px;border-radius:10px;color:var(--muted);font-size:.92rem}
+.card .cbody{padding:14px}
+.title{font-weight:600;line-height:1.25;margin:6px 0 4px;font-size:1rem;word-break:break-word}
+.footer{border-top:1px solid var(--line);margin-top:28px;padding:18px 0;color:var(--muted);font-size:.9rem}
+.tools{display:flex;gap:8px;align-items:center;margin:8px 0 16px}
+.search{flex:1;border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:14px}
+.select{border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:#fff}
+@media (max-width:940px){.featured{grid-template-columns:1fr}.cards{grid-template-columns:repeat(2,1fr)}}
+@media (max-width:560px){.cards{grid-template-columns:1fr}}

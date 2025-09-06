@@ -1,0 +1,14 @@
+{
+  "name": "moodette-scraper",
+  "version": "1.0.0",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "scrape": "node index.js",
+    "install:browsers": "npx playwright install --with-deps chromium"
+  },
+  "dependencies": {
+    "papaparse": "^5.4.1",
+    "playwright": "^1.46.0"
+  }
+}
