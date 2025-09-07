@@ -11,6 +11,9 @@
   <link rel="dns-prefetch" href="https://www.temu.com">
 
   <link rel="stylesheet" href="assets/style.css">
+
+  <!-- Plausible (опционально, для кликов). Замени домен или удали блок -->
+  <!-- <script defer data-domain="YOUR-DOMAIN" src="https://plausible.io/js/script.js"></script> -->
 </head>
 <body>
   <header class="wrap">
@@ -21,7 +24,6 @@
   <main class="wrap">
     <div id="grid" class="grid"></div>
 
-    <!-- Шаблон карточки -->
     <template id="card-tpl">
       <article class="card">
         <div class="thumb"></div>
@@ -75,17 +77,25 @@
 
       title.textContent = item.title || `Temu link — ${item.id}`;
       cat.textContent   = (item.category || 'mixed').replace('-', ' ');
+
+      // Всегда ведём через go.html по id
       btn.href = `/go.html?id=${encodeURIComponent(item.id)}`;
 
+      // Вся карточка кликабельна
       card.addEventListener('click', (e) => {
-        if (!e.target.closest('a')) window.open(btn.href, '_blank', 'noopener');
+        if (!e.target.closest('a')) {
+          // if (window.plausible) plausible('temu_click', { props: { id: item.id }});
+          window.open(btn.href, '_blank', 'noopener');
+        }
       });
+      // btn.addEventListener('click', () => window.plausible && plausible('temu_click', { props: { id: item.id }}));
 
       return el;
     }
 
     (async () => {
       const items = await getData();
+      // Ничего не фильтруем — показываем всё
       items.forEach(it => grid.appendChild(renderItem(it)));
     })();
   </script>
