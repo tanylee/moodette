@@ -1,27 +1,22 @@
 name: Scrape Temu -> products.json
 
 on:
-  workflow_dispatch:
   schedule:
-    - cron: "0 */6 * * *"
-  push:
-    paths:
-      - "scraper/**"
-      - ".github/workflows/scrape.yml"
+    - cron: '0 */6 * * *'          # каждые 6 часов
+  workflow_dispatch:
 
 jobs:
   scrape:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
-    permissions:
-      contents: write
-    concurrency:
-      group: moodette-scrape
-      cancel-in-progress: true
+
     env:
+      # укажи свой CSV с Google Sheets; если уже есть секрет — можно удалить эту строку
       SHEET_CSV_URL: ${{ secrets.SHEET_CSV_URL }}
-      MAX_ROWS: "12"        # можешь поднять до 20–40
-      CONCURRENCY: "4"      # 3–5 безопасно
+      # можно переопределить через Secrets
+      MAX_ROWS: ${{ secrets.MAX_ROWS ||  '120' }}
+      CONCURRENCY: ${{ secrets.CONCURRENCY || '4' }}
+      # Домен для RSS (например, Netlify)
+      SITE_URL: ${{ secrets.SITE_URL || 'https://capable-douhua-1a4c98.netlify.app' }}
 
     steps:
       - name: Checkout
@@ -32,101 +27,55 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: '20'
 
-      - name: Install deps
-        working-directory: scraper
+      # Playwright нужен для переходов по редиректу Temu
+      - name: Install deps (playwright)
         run: |
-          npm install
-          npm run install:browsers
-
-      - name: Debug CSV (first 10 lines)
-        run: |
-          echo "URL=$SHEET_CSV_URL"
-          curl -I -L "$SHEET_CSV_URL" || true
-          echo "----- HEAD -----"
-          curl -L "$SHEET_CSV_URL" | sed -n '1,10p' || true
+          npm -v || true
+          npx --yes playwright install --with-deps chromium
 
       - name: Run scraper
-        working-directory: scraper
-        run: npm run scrape
+        run: node scraper/index.js
+        env:
+          SHEET_CSV_URL: ${{ env.SHEET_CSV_URL }}
+          MAX_ROWS: ${{ env.MAX_ROWS }}
+          CONCURRENCY: ${{ env.CONCURRENCY }}
 
-      - name: Commit products.json (hard-safe)
-        shell: bash
+      - name: Show first 10 lines of products.json
         run: |
-          set -euo pipefail
-          git config user.name  "github-actions[bot]"
+          echo "------ data/products.json (head) ------"
+          head -n 10 data/products.json || true
+          echo "---------------------------------------"
+
+      # Собираем RSS из products.json
+      - name: Build RSS
+        run: |
+          npm ci || true
+          SITE_URL="${{ env.SITE_URL }}" npm run build:rss
+
+      # Коммитим изменения (products.json и feed.xml)
+      - name: Commit updated artifacts
+        run: |
+          git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
-          test -f data/products.json || { echo "data/products.json not found"; exit 0; }
-          if git diff --quiet -- data/products.json; then
-            echo "No changes in data/products.json — skip commit"
-            exit 0
+          git add data/products.json feed.xml
+          if ! git diff --cached --quiet; then
+            git commit -m "Update products.json & feed.xml (auto)"
+            git pull --rebase
+            git push
+          else
+            echo "No changes to commit"
           fi
 
-          TMPFILE="$(mktemp)"
-          cp -f data/products.json "$TMPFILE"
-
-          git fetch origin main
-          git checkout main
-          git reset --hard origin/main
-          mv -f "$TMPFILE" data/products.json
-          rm -f "$TMPFILE"
-
-          git add data/products.json
-          git commit -m "Update products.json from Sheet (auto)"
-
-          n=0
-          until [ $n -ge 3 ]
-          do
-            if git push origin HEAD:main; then
-              echo "Pushed successfully"
-              break
-            fi
-            echo "Push rejected, retrying... ($((n+1))/3)"
-            git fetch origin main
-            git reset --hard origin/main
-            git add data/products.json
-            if git diff --quiet --cached; then
-              echo "Remote already has same content — skipping commit"
-              exit 0
-            fi
-            git commit --amend --no-edit || true
-            n=$((n+1))
-            sleep 2
-          done
-          if [ $n -ge 3 ]; then
-            echo "ERROR: push failed after retries" >&2
-            exit 1
-          fi
-
-      # Включи, если используешь Netlify build hook (добавь секрет NETLIFY_HOOK_URL)
-      # - name: Trigger Netlify build
-      #   if: always()
-      #   run: curl -X POST -d '{}' ${{ secrets.NETLIFY_HOOK_URL }}
+      # Дергаем Netlify билд-хук — ТВОЙ РЕАЛЬНЫЙ (ты его прислал)
+      - name: Trigger Netlify build
+        if: always()
+        run: curl -X POST -d '{}' "https://api.netlify.com/build_hooks/68bd26bfa107607248f27a64"
 
   deploy:
     needs: scrape
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      pages: write
-      id-token: write
-    concurrency:
-      group: "pages"
-      cancel-in-progress: true
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Setup Pages
-        uses: actions/configure-pages@v5
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: .
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+      - name: Done
+        run: echo "Deploy will be handled by Netlify build hook."
