@@ -1,13 +1,35 @@
-<!doctype html>
-<meta charset="utf-8">
-<title>Go to Temu…</title>
-<meta name="robots" content="noindex,nofollow">
-<style>
-  body{font:16px/1.4 system-ui,-apple-system,Segoe UI,Roboto;padding:40px;color:#333}
-</style>
-<script>
-  const id = new URL(location.href).searchParams.get('id') || '';
-  const url = id ? `https://temu.to/k/${id}` : '/';
-  location.replace(url);
-</script>
-<p>Redirecting to Temu…</p>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Redirecting to Temu...</title>
+
+  <!-- ✅ Plausible Analytics -->
+  <script defer data-domain="capable-douhua-1a4c98.netlify.app" src="https://plausible.io/js/script.js"></script>
+
+  <script>
+    // Получаем параметр ссылки из URL
+    const params = new URLSearchParams(window.location.search);
+    const target = params.get("url");
+
+    // Логируем событие клика в Plausible
+    function trackAndRedirect() {
+      if (target) {
+        // Отправляем событие "Temu Click"
+        plausible("Temu Click", { props: { link: target } });
+
+        // Делаем редирект через 300мс, чтобы событие успело отправиться
+        setTimeout(() => {
+          window.location.href = target;
+        }, 300);
+      } else {
+        document.body.innerHTML = "<h2>No URL provided</h2>";
+      }
+    }
+  </script>
+</head>
+<body onload="trackAndRedirect()">
+  <h3>Redirecting to Temu...</h3>
+</body>
+</html>
