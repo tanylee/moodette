@@ -10,7 +10,11 @@ if (!SHEET_CSV_URL) {
 
 const OUT_PATH = new URL("../data/products.json", import.meta.url);
 
+// Параметры производительности
 const MOBILE = devices["iPhone 12"];
+const MAX_ROWS = parseInt(process.env.MAX_ROWS || "20", 10);         // сколько ссылок обрабатываем за 1 прогон
+const CONCURRENCY = parseInt(process.env.CONCURRENCY || "3", 10);   // параллельных браузерных вкладок
+const PAGE_TIMEOUT = 45000;                                         // 45s на страницу
 const WAIT = (ms) => new Promise(r => setTimeout(r, ms));
 
 function kwCategory(title = "") {
@@ -34,98 +38,52 @@ async function fetchCsv(url) {
       url: (r.affiliate_url || r.url || "").toString().trim(),
     }))
     .filter(r => r.id && r.url);
+
   // unique by id
   const map = new Map();
   for (const r of rows) if (!map.has(r.id)) map.set(r.id, r.url);
-  return Array.from(map.entries()).map(([id,url]) => ({id,url}));
+  const list = Array.from(map.entries()).map(([id, url]) => ({ id, url }));
+
+  const sliced = list.slice(0, MAX_ROWS);
+  console.log(`Loaded ${list.length} rows, taking first ${sliced.length}.`);
+  return sliced;
 }
 
-async function scrapeOne(page, id, affUrl) {
-  const resp = await page.goto(affUrl, { waitUntil: "domcontentloaded", timeout: 60000 }).catch(()=>null);
-  if (!resp || !resp.ok()) {
-    await page.reload({ waitUntil: "domcontentloaded", timeout: 60000 }).catch(()=>{});
-  }
-  await page.waitForLoadState("domcontentloaded", { timeout: 60000 }).catch(()=>{});
-  await WAIT(1200);
+async function scrapeOne(ctx, id, affUrl) {
+  const page = await ctx.newPage();
+  // Режем тяжёлые ресурсы — нам нужен лишь HTML/мета
+  await page.route("**/*", route => {
+    const type = route.request().resourceType();
+    if (["image", "media", "font", "stylesheet"].includes(type)) return route.abort();
+    route.continue();
+  });
+  page.setDefaultTimeout(PAGE_TIMEOUT);
 
-  const inBrowser = await page.locator('text=/Continue in browser|Continue in browser/i').first();
-  if (await inBrowser.count()) {
-    await inBrowser.click().catch(()=>{});
-    await page.waitForLoadState("domcontentloaded").catch(()=>{});
-    await WAIT(800);
-  }
-
-  const title =
-    (await page.locator('meta[property="og:title"]').getAttribute("content").catch(()=>null)) ||
-    (await page.locator('h1').first().textContent().catch(()=>null)) || "";
-
-  const image =
-    (await page.locator('meta[property="og:image"]').getAttribute("content").catch(()=>null)) ||
-    (await page.locator('img[alt][src]').first().getAttribute("src").catch(()=>null)) || "";
-
-  let price = "";
-  const ldjsonHandles = await page.locator('script[type="application/ld+json"]').all();
-  for (const h of ldjsonHandles) {
-    try {
-      const txt = await h.textContent();
-      const data = JSON.parse(txt);
-      const nodes = Array.isArray(data) ? data : [data];
-      for (const n of nodes) {
-        if ((n["@type"] || "").toLowerCase() === "product" && n.offers) {
-          price = n.offers.price || n.offers.lowPrice || n.offers.highPrice || "";
-          if (price) break;
-        }
-      }
-      if (price) break;
-    } catch {}
-  }
-  if (!price) {
-    price = await page.locator('meta[itemprop="price"], meta[property="product:price:amount"]').getAttribute("content").catch(()=> "") || "";
-  }
-  if (price) {
-    const num = parseFloat(String(price).replace(/[^\d.]/g,""));
-    if (!Number.isNaN(num)) price = num.toFixed(2);
-  }
-
-  const category = kwCategory(title);
-
-  return {
-    id,
-    title: title ? title.trim() : `Temu link — ${id}`,
-    image: image || undefined,
-    price: price || undefined,
-    affiliate_url: affUrl,
-    category
-  };
-}
-
-async function run() {
-  const rows = await fetchCsv(SHEET_CSV_URL);
-  if (!rows.length) throw new Error("No rows in sheet CSV");
-
-  const browser = await chromium.launch({ headless: true });
-  const context = await browser.newContext({ ...MOBILE, locale: "en-US", timezoneId: "America/Los_Angeles" });
-  const page = await context.newPage();
-
-  const out = [];
-  for (const {id,url} of rows) {
-    try {
-      console.log("Scraping:", id, url);
-      const item = await scrapeOne(page, id, url);
-      out.push(item);
-    } catch (e) {
-      console.error("Failed:", id, url, e.message);
-      out.push({ id, title: `Temu link — ${id}`, affiliate_url: url, category: "mixed" });
+  try {
+    const resp = await page.goto(affUrl, { waitUntil: "domcontentloaded", timeout: PAGE_TIMEOUT });
+    if (!resp || !resp.ok()) {
+      await page.reload({ waitUntil: "domcontentloaded", timeout: PAGE_TIMEOUT }).catch(() => {});
     }
-  }
+    // иногда появляется «Continue in browser»
+    const inBrowser = page.locator('text=/Continue in browser|Открыть в браузере/i').first();
+    if (await inBrowser.count()) {
+      await inBrowser.click().catch(() => {});
+      await page.waitForLoadState("domcontentloaded").catch(() => {});
+    }
 
-  await browser.close();
-  if (out.length > 1) {
-    out.sort((a,b) => ((b.image?1:0)+(b.price?1:0)) - ((a.image?1:0)+(a.price?1:0)));
-  }
-  await fs.mkdir(new URL("../data/", import.meta.url), { recursive: true });
-  await fs.writeFile(OUT_PATH, JSON.stringify(out, null, 2));
-  console.log("Wrote", OUT_PATH.pathname);
-}
+    // собираем данные
+    const title =
+      (await page.locator('meta[property="og:title"]').getAttribute("content").catch(() => null)) ||
+      (await page.locator('h1').first().textContent().catch(() => null)) || "";
 
-run().catch(e => { console.error(e); process.exit(1); });
+    const image =
+      (await page.locator('meta[property="og:image"]').getAttribute("content").catch(() => null)) ||
+      (await page.locator('img[alt][src]').first().getAttribute("src").catch(() => null)) || "";
+
+    let price = "";
+    const ldjsonHandles = await page.locator('script[type="application/ld+json"]').all();
+    for (const h of ldjsonHandles) {
+      try {
+        const txt = await h.textContent();
+        const data = JSON.parse(txt);
+        const nodes = Arra
