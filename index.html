@@ -1,110 +1,29 @@
-<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Moodette — Pinterest Finds</title>
+<div class="grid" id="product-grid"></div>
 
-  <!-- чуть ускоряем переходы на temu -->
-  <link rel="preconnect" href="https://temu.to">
-  <link rel="dns-prefetch" href="https://temu.to">
-  <link rel="preconnect" href="https://www.temu.com">
-  <link rel="dns-prefetch" href="https://www.temu.com">
+<script>
+  async function loadProducts() {
+    const res = await fetch("./data/products.json");
+    const products = await res.json();
+    const grid = document.getElementById("product-grid");
 
-  <link rel="stylesheet" href="assets/style.css">
-</head>
-<body>
-  <header class="wrap">
-    <h1>Moodette</h1>
-    <p class="sub">Curated Temu finds for your Pinterest boards</p>
-  </header>
-
-  <main class="wrap">
-    <div id="grid" class="grid"></div>
-
-    <!-- шаблон карточки -->
-    <template id="card-tpl">
-      <article class="card">
-        <div class="thumb"></div>
-        <div class="body">
-          <h3 class="title"></h3>
-          <div class="meta">
-            <span class="price"></span>
-            <span class="pill cat"></span>
-          </div>
-          <!-- ВАЖНО: ссылка, а не button -->
-          <a class="btn-go" target="_blank" rel="nofollow noopener sponsored">Go to Temu</a>
+    grid.innerHTML = products.map(p => `
+      <div class="card">
+        <div class="thumb">
+          <img src="${p.image || ''}" alt="${p.title || 'Temu product'}">
         </div>
-      </article>
-    </template>
-  </main>
+        <div class="body">
+          <h2 class="title">${p.title || 'Temu product'}</h2>
+          <div class="meta">
+            <span class="price">$${p.price || '—'}</span>
+            <span class="pill">${p.category || ''}</span>
+          </div>
+          <a class="btn-go" href="${p.url}" target="_blank" rel="nofollow noopener">
+            Go to Temu
+          </a>
+        </div>
+      </div>
+    `).join("");
+  }
 
-  <script type="module">
-    async function getData() {
-      const res = await fetch('data/products.json', { cache: 'no-store' });
-      if (!res.ok) return [];
-      return res.json();
-    }
-
-    const grid = document.getElementById('grid');
-    const tpl  = document.getElementById('card-tpl');
-
-    // формат цены: если нет — пусто (не показываем $0.00)
-    const fmtPrice = v => (v !== undefined && v !== null && !Number.isNaN(+v))
-      ? `$${(+v).toFixed(2)}`
-      : '';
-
-    function renderItem(item) {
-      const el = tpl.content.cloneNode(true);
-      const card = el.querySelector('.card');
-      const thumb = el.querySelector('.thumb');
-      const title = el.querySelector('.title');
-      const price = el.querySelector('.price');
-      const cat   = el.querySelector('.cat');
-      const btn   = el.querySelector('.btn-go');
-
-      // изображение (только реальные карточки дойдут до рендера, но подстрахуемся)
-      if (item.image) {
-        const img = new Image();
-        img.src = item.image;
-        img.alt = item.title || item.id;
-        img.loading = 'lazy';
-        thumb.appendChild(img);
-      } else {
-        const sk = document.createElement('div');
-        sk.className = 'skeleton';
-        sk.textContent = item.id;
-        thumb.classList.add('thumb--empty');
-        thumb.appendChild(sk);
-      }
-
-      title.textContent = item.title || `Temu link — ${item.id}`;
-
-      const priceText = fmtPrice(item.price);
-      if (priceText) price.textContent = priceText; else price.style.display = 'none';
-
-      cat.textContent = (item.category || 'mixed').replace('-', ' ');
-
-      // ведём через промежуточную go.html (надёжнее для кликов и антифлагов)
-      btn.href = `/go.html?id=${encodeURIComponent(item.id)}`;
-
-      // вся карточка кликабельна
-      card.addEventListener('click', (e) => {
-        if (!e.target.closest('a')) window.open(btn.href, '_blank', 'noopener');
-      });
-
-      return el;
-    }
-
-    (async () => {
-      const items = await getData();
-
-      // Pinterest любит яркие пины → показываем только товары с изображением
-      const visible = items.filter(it => !!it.image);
-
-      // выведем до 200 карточек
-      visible.slice(0, 200).forEach(it => grid.appendChild(renderItem(it)));
-    })();
-  </script>
-</body>
-</html>
+  loadProducts();
+</script>
