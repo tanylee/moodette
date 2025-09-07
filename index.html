@@ -1,33 +1,55 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Moodette</title>
-  <link rel="stylesheet" href="assets/styles.css" />
+  <link rel="stylesheet" href="assets/styles.css">
 
   <!-- ✅ Plausible Analytics -->
   <script defer data-domain="capable-douhua-1a4c98.netlify.app" src="https://plausible.io/js/script.js"></script>
 </head>
 <body>
-  <header>
+  <div class="container">
     <h1>Moodette</h1>
     <p>Curated Temu finds for your Pinterest boards</p>
-  </header>
 
-  <main id="product-list" class="grid"></main>
+    <div id="products" class="grid"></div>
+  </div>
 
-  <template id="product-template">
-    <div class="card">
-      <img class="product-image" alt="">
-      <div class="card-body">
-        <h3 class="product-title"></h3>
-        <div class="tags"></div>
-        <a class="btn" target="_blank">Go to Temu</a>
-      </div>
-    </div>
-  </template>
+  <script>
+    async function loadProducts() {
+      try {
+        const res = await fetch("data/products.json");
+        const products = await res.json();
 
-  <script src="scripts/build-rss.js"></script>
+        const container = document.getElementById("products");
+        container.innerHTML = "";
+
+        products.forEach(p => {
+          const card = document.createElement("div");
+          card.className = "card";
+
+          card.innerHTML = `
+            <img src="${p.image || 'assets/placeholder.jpg'}" alt="${p.title}">
+            <h3>${p.title || 'Temu product'}</h3>
+            <p class="tag">${p.category || 'mixed'}</p>
+            <a class="btn"
+               href="go.html?url=${encodeURIComponent(p.link)}"
+               target="_blank"
+            >
+              Go to Temu
+            </a>
+          `;
+
+          container.appendChild(card);
+        });
+      } catch (err) {
+        console.error("Error loading products.json", err);
+      }
+    }
+
+    loadProducts();
+  </script>
 </body>
 </html>
