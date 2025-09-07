@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Moodette — Pinterest Finds</title>
 
-  <!-- ускоряем переходы на Temu -->
   <link rel="preconnect" href="https://temu.to">
   <link rel="dns-prefetch" href="https://temu.to">
   <link rel="preconnect" href="https://www.temu.com">
@@ -29,7 +28,6 @@
         <div class="body">
           <h3 class="title"></h3>
           <div class="meta">
-            <span class="price"></span>
             <span class="pill cat"></span>
           </div>
           <a class="btn-go" target="_blank" rel="nofollow noopener sponsored">Go to Temu</a>
@@ -48,23 +46,14 @@
     const grid = document.getElementById('grid');
     const tpl  = document.getElementById('card-tpl');
 
-    // формат цены: если пусто или 0 → «—»
-    const fmtPrice = v => {
-      const n = Number(v);
-      if (!Number.isFinite(n) || n <= 0) return '—';
-      return `$${n.toFixed(2)}`;
-    };
-
     function renderItem(item) {
       const el = tpl.content.cloneNode(true);
       const card = el.querySelector('.card');
       const thumb = el.querySelector('.thumb');
       const title = el.querySelector('.title');
-      const price = el.querySelector('.price');
       const cat   = el.querySelector('.cat');
       const btn   = el.querySelector('.btn-go');
 
-      // Картинка: если есть — показываем; если нет — аккуратный плейсхолдер без блюра
       if (item.image) {
         const img = new Image();
         img.src = item.image;
@@ -85,13 +74,9 @@
       }
 
       title.textContent = item.title || `Temu link — ${item.id}`;
-      price.textContent = fmtPrice(item.price);
       cat.textContent   = (item.category || 'mixed').replace('-', ' ');
-
-      // Всегда ведём через go.html по id
       btn.href = `/go.html?id=${encodeURIComponent(item.id)}`;
 
-      // Вся карточка кликабельна
       card.addEventListener('click', (e) => {
         if (!e.target.closest('a')) window.open(btn.href, '_blank', 'noopener');
       });
@@ -101,7 +86,6 @@
 
     (async () => {
       const items = await getData();
-      // НИЧЕГО НЕ ФИЛЬТРУЕМ: показываем ВСЁ
       items.forEach(it => grid.appendChild(renderItem(it)));
     })();
   </script>
