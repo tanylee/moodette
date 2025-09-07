@@ -1,29 +1,109 @@
-<div class="grid" id="product-grid"></div>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Moodette — Pinterest Finds</title>
 
-<script>
-  async function loadProducts() {
-    const res = await fetch("./data/products.json");
-    const products = await res.json();
-    const grid = document.getElementById("product-grid");
+  <!-- ускоряем переходы на Temu -->
+  <link rel="preconnect" href="https://temu.to">
+  <link rel="dns-prefetch" href="https://temu.to">
+  <link rel="preconnect" href="https://www.temu.com">
+  <link rel="dns-prefetch" href="https://www.temu.com">
 
-    grid.innerHTML = products.map(p => `
-      <div class="card">
-        <div class="thumb">
-          <img src="${p.image || ''}" alt="${p.title || 'Temu product'}">
-        </div>
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+  <header class="wrap">
+    <h1>Moodette</h1>
+    <p class="sub">Curated Temu finds for your Pinterest boards</p>
+  </header>
+
+  <main class="wrap">
+    <div id="grid" class="grid"></div>
+
+    <!-- Шаблон карточки -->
+    <template id="card-tpl">
+      <article class="card">
+        <div class="thumb"></div>
         <div class="body">
-          <h2 class="title">${p.title || 'Temu product'}</h2>
+          <h3 class="title"></h3>
           <div class="meta">
-            <span class="price">$${p.price || '—'}</span>
-            <span class="pill">${p.category || ''}</span>
+            <span class="price"></span>
+            <span class="pill cat"></span>
           </div>
-          <a class="btn-go" href="${p.url}" target="_blank" rel="nofollow noopener">
-            Go to Temu
-          </a>
+          <a class="btn-go" target="_blank" rel="nofollow noopener sponsored">Go to Temu</a>
         </div>
-      </div>
-    `).join("");
-  }
+      </article>
+    </template>
+  </main>
 
-  loadProducts();
-</script>
+  <script type="module">
+    async function getData() {
+      const res = await fetch('data/products.json', { cache: 'no-store' });
+      if (!res.ok) return [];
+      return res.json();
+    }
+
+    const grid = document.getElementById('grid');
+    const tpl  = document.getElementById('card-tpl');
+
+    // формат цены: если пусто или 0 → «—»
+    const fmtPrice = v => {
+      const n = Number(v);
+      if (!Number.isFinite(n) || n <= 0) return '—';
+      return `$${n.toFixed(2)}`;
+    };
+
+    function renderItem(item) {
+      const el = tpl.content.cloneNode(true);
+      const card = el.querySelector('.card');
+      const thumb = el.querySelector('.thumb');
+      const title = el.querySelector('.title');
+      const price = el.querySelector('.price');
+      const cat   = el.querySelector('.cat');
+      const btn   = el.querySelector('.btn-go');
+
+      // Картинка: если есть — показываем; если нет — аккуратный плейсхолдер без блюра
+      if (item.image) {
+        const img = new Image();
+        img.src = item.image;
+        img.alt = item.title || item.id || 'Temu product';
+        img.loading = 'lazy';
+        thumb.appendChild(img);
+      } else {
+        const ph = document.createElement('div');
+        ph.style.height = '220px';
+        ph.style.display = 'flex';
+        ph.style.alignItems = 'center';
+        ph.style.justifyContent = 'center';
+        ph.style.background = '#f3f3f3';
+        ph.style.color = '#8b8b8b';
+        ph.style.fontWeight = '600';
+        ph.textContent = item.title || item.id || 'Temu product';
+        thumb.appendChild(ph);
+      }
+
+      title.textContent = item.title || `Temu link — ${item.id}`;
+      price.textContent = fmtPrice(item.price);
+      cat.textContent   = (item.category || 'mixed').replace('-', ' ');
+
+      // Всегда ведём через go.html по id
+      btn.href = `/go.html?id=${encodeURIComponent(item.id)}`;
+
+      // Вся карточка кликабельна
+      card.addEventListener('click', (e) => {
+        if (!e.target.closest('a')) window.open(btn.href, '_blank', 'noopener');
+      });
+
+      return el;
+    }
+
+    (async () => {
+      const items = await getData();
+      // НИЧЕГО НЕ ФИЛЬТРУЕМ: показываем ВСЁ
+      items.forEach(it => grid.appendChild(renderItem(it)));
+    })();
+  </script>
+</body>
+</html>
