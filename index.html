@@ -42,7 +42,6 @@
 
     const grid = document.getElementById('grid');
     const tpl  = document.getElementById('card-tpl');
-
     const fmtPrice = v => v ? `$${(+v).toFixed(2)}` : '';
 
     function renderItem(item){
@@ -71,10 +70,8 @@
       title.textContent = item.title || `Temu link — ${item.id}`;
       price.textContent = fmtPrice(item.price);
       cat.textContent   = (item.category || 'mixed').replace('-', ' ');
-      // ВАЖНО: всегда ссылка, а не button. И ведём на промежуточную go.html
-      btn.href = `/go.html?id=${encodeURIComponent(item.id)}`;
+      btn.href = `/go.html?id=${encodeURIComponent(item.id)}`; // всегда ссылка
 
-      // по клику на саму карточку — тоже открыть
       card.addEventListener('click', (e) => {
         if (!e.target.closest('a')) window.open(btn.href, '_blank', 'noopener');
       });
