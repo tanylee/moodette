@@ -1,9 +1,9 @@
 name: Scrape Temu -> products.json
 
 on:
-  workflow_dispatch:        # запуск вручную
-  schedule:                 # по расписанию
-    - cron: "0 */6 * * *"   # каждые 6 часов
+  workflow_dispatch:
+  schedule:
+    - cron: "0 */6 * * *"
   push:
     paths:
       - "scraper/**"
@@ -14,9 +14,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
-      SHEET_CSV_URL: ${{ secrets.SHEET_CSV_URL }}  # CSV из Google Sheets (id,affiliate_url)
-      MAX_ROWS: "20"         # сколько ссылок обрабатывать за один прогон (можно поднять позже)
-      CONCURRENCY: "3"       # параллельные вкладки Playwright (2–4 безопасно)
+      SHEET_CSV_URL: ${{ secrets.SHEET_CSV_URL }}
+      MAX_ROWS: "12"         # увеличишь после проверки (20-30)
+      CONCURRENCY: "4"       # 3-5 безопасно
 
     steps:
       - name: Checkout
@@ -33,7 +33,6 @@ jobs:
           npm install
           npm run install:browsers
 
-      # Диагностика, чтобы видеть что реально приходит по CSV
       - name: Debug CSV (first 10 lines)
         run: |
           echo "URL=$SHEET_CSV_URL"
