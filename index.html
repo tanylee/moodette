@@ -1,103 +1,33 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Moodette — Pinterest Finds</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Moodette</title>
+  <link rel="stylesheet" href="assets/styles.css" />
 
-  <link rel="preconnect" href="https://temu.to">
-  <link rel="dns-prefetch" href="https://temu.to">
-  <link rel="preconnect" href="https://www.temu.com">
-  <link rel="dns-prefetch" href="https://www.temu.com">
-
-  <link rel="stylesheet" href="assets/style.css">
-
-  <!-- Plausible (опционально, для кликов). Замени домен или удали блок -->
-  <!-- <script defer data-domain="YOUR-DOMAIN" src="https://plausible.io/js/script.js"></script> -->
+  <!-- ✅ Plausible Analytics -->
+  <script defer data-domain="capable-douhua-1a4c98.netlify.app" src="https://plausible.io/js/script.js"></script>
 </head>
 <body>
-  <header class="wrap">
+  <header>
     <h1>Moodette</h1>
-    <p class="sub">Curated Temu finds for your Pinterest boards</p>
+    <p>Curated Temu finds for your Pinterest boards</p>
   </header>
 
-  <main class="wrap">
-    <div id="grid" class="grid"></div>
+  <main id="product-list" class="grid"></main>
 
-    <template id="card-tpl">
-      <article class="card">
-        <div class="thumb"></div>
-        <div class="body">
-          <h3 class="title"></h3>
-          <div class="meta">
-            <span class="pill cat"></span>
-          </div>
-          <a class="btn-go" target="_blank" rel="nofollow noopener sponsored">Go to Temu</a>
-        </div>
-      </article>
-    </template>
-  </main>
+  <template id="product-template">
+    <div class="card">
+      <img class="product-image" alt="">
+      <div class="card-body">
+        <h3 class="product-title"></h3>
+        <div class="tags"></div>
+        <a class="btn" target="_blank">Go to Temu</a>
+      </div>
+    </div>
+  </template>
 
-  <script type="module">
-    async function getData() {
-      const res = await fetch('data/products.json', { cache: 'no-store' });
-      if (!res.ok) return [];
-      return res.json();
-    }
-
-    const grid = document.getElementById('grid');
-    const tpl  = document.getElementById('card-tpl');
-
-    function renderItem(item) {
-      const el = tpl.content.cloneNode(true);
-      const card = el.querySelector('.card');
-      const thumb = el.querySelector('.thumb');
-      const title = el.querySelector('.title');
-      const cat   = el.querySelector('.cat');
-      const btn   = el.querySelector('.btn-go');
-
-      if (item.image) {
-        const img = new Image();
-        img.src = item.image;
-        img.alt = item.title || item.id || 'Temu product';
-        img.loading = 'lazy';
-        thumb.appendChild(img);
-      } else {
-        const ph = document.createElement('div');
-        ph.style.height = '220px';
-        ph.style.display = 'flex';
-        ph.style.alignItems = 'center';
-        ph.style.justifyContent = 'center';
-        ph.style.background = '#f3f3f3';
-        ph.style.color = '#8b8b8b';
-        ph.style.fontWeight = '600';
-        ph.textContent = item.title || item.id || 'Temu product';
-        thumb.appendChild(ph);
-      }
-
-      title.textContent = item.title || `Temu link — ${item.id}`;
-      cat.textContent   = (item.category || 'mixed').replace('-', ' ');
-
-      // Всегда ведём через go.html по id
-      btn.href = `/go.html?id=${encodeURIComponent(item.id)}`;
-
-      // Вся карточка кликабельна
-      card.addEventListener('click', (e) => {
-        if (!e.target.closest('a')) {
-          // if (window.plausible) plausible('temu_click', { props: { id: item.id }});
-          window.open(btn.href, '_blank', 'noopener');
-        }
-      });
-      // btn.addEventListener('click', () => window.plausible && plausible('temu_click', { props: { id: item.id }}));
-
-      return el;
-    }
-
-    (async () => {
-      const items = await getData();
-      // Ничего не фильтруем — показываем всё
-      items.forEach(it => grid.appendChild(renderItem(it)));
-    })();
-  </script>
+  <script src="scripts/build-rss.js"></script>
 </body>
 </html>
