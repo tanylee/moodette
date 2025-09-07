@@ -13,26 +13,21 @@ jobs:
   scrape:
     runs-on: ubuntu-latest
     timeout-minutes: 30
-
-    # нужно для git push из job
     permissions:
       contents: write
-
-    # не даём двум рансам работать параллельно и конфликтовать
     concurrency:
       group: moodette-scrape
       cancel-in-progress: true
-
     env:
       SHEET_CSV_URL: ${{ secrets.SHEET_CSV_URL }}
-      MAX_ROWS: "12"         # можно поднять после проверки
-      CONCURRENCY: "4"       # 3–5 безопасно
+      MAX_ROWS: "12"        # можешь поднять до 20–40
+      CONCURRENCY: "4"      # 3–5 безопасно
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0      # нужен полный history для rebase
+          fetch-depth: 0
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -56,25 +51,59 @@ jobs:
         working-directory: scraper
         run: npm run scrape
 
-      - name: Commit products.json
+      - name: Commit products.json (hard-safe)
         shell: bash
         run: |
-          set -e
+          set -euo pipefail
           git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
+          test -f data/products.json || { echo "data/products.json not found"; exit 0; }
+          if git diff --quiet -- data/products.json; then
+            echo "No changes in data/products.json — skip commit"
+            exit 0
+          fi
+
+          TMPFILE="$(mktemp)"
+          cp -f data/products.json "$TMPFILE"
+
           git fetch origin main
           git checkout main
-          # подтягиваем удалённые изменения и кладём наш коммит поверх
-          git pull --rebase --autostash origin main
+          git reset --hard origin/main
+          mv -f "$TMPFILE" data/products.json
+          rm -f "$TMPFILE"
 
-          if ! git diff --quiet -- data/products.json; then
+          git add data/products.json
+          git commit -m "Update products.json from Sheet (auto)"
+
+          n=0
+          until [ $n -ge 3 ]
+          do
+            if git push origin HEAD:main; then
+              echo "Pushed successfully"
+              break
+            fi
+            echo "Push rejected, retrying... ($((n+1))/3)"
+            git fetch origin main
+            git reset --hard origin/main
             git add data/products.json
-            git commit -m "Update products.json from Sheet (auto)"
-            git push origin HEAD:main
-          else
-            echo "No changes in data/products.json — skip commit"
+            if git diff --quiet --cached; then
+              echo "Remote already has same content — skipping commit"
+              exit 0
+            fi
+            git commit --amend --no-edit || true
+            n=$((n+1))
+            sleep 2
+          done
+          if [ $n -ge 3 ]; then
+            echo "ERROR: push failed after retries" >&2
+            exit 1
           fi
+
+      # Включи, если используешь Netlify build hook (добавь секрет NETLIFY_HOOK_URL)
+      # - name: Trigger Netlify build
+      #   if: always()
+      #   run: curl -X POST -d '{}' ${{ secrets.NETLIFY_HOOK_URL }}
 
   deploy:
     needs: scrape
