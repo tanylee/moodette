@@ -7,7 +7,6 @@ const DEST = new URL('../feed.xml', import.meta.url);
 function esc(s=''){return s.replace(/[<>&'"]/g,m=>({'<':'&lt;','>':'&gt;','&':'&amp;',"'":'&apos;','"':'&quot;'}[m]))}
 
 const now = new Date().toUTCString();
-
 const products = JSON.parse(await fs.readFile(SRC, 'utf8')).slice(0, 100);
 
 const items = products.map(p=>{
