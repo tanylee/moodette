@@ -1,9 +1,9 @@
 name: Scrape Temu -> products.json
 
 on:
-  workflow_dispatch:
-  schedule:
-    - cron: "0 */6 * * *"
+  workflow_dispatch:        # запуск вручную
+  schedule:                 # по расписанию
+    - cron: "0 */6 * * *"   # каждые 6 часов
   push:
     paths:
       - "scraper/**"
@@ -12,8 +12,11 @@ on:
 jobs:
   scrape:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     env:
-      SHEET_CSV_URL: ${{ secrets.SHEET_CSV_URL }}
+      SHEET_CSV_URL: ${{ secrets.SHEET_CSV_URL }}  # CSV из Google Sheets (id,affiliate_url)
+      MAX_ROWS: "20"         # сколько ссылок обрабатывать за один прогон (можно поднять позже)
+      CONCURRENCY: "3"       # параллельные вкладки Playwright (2–4 безопасно)
 
     steps:
       - name: Checkout
@@ -30,6 +33,14 @@ jobs:
           npm install
           npm run install:browsers
 
+      # Диагностика, чтобы видеть что реально приходит по CSV
+      - name: Debug CSV (first 10 lines)
+        run: |
+          echo "URL=$SHEET_CSV_URL"
+          curl -I -L "$SHEET_CSV_URL" || true
+          echo "----- HEAD -----"
+          curl -L "$SHEET_CSV_URL" | sed -n '1,10p' || true
+
       - name: Run scraper
         working-directory: scraper
         run: npm run scrape
@@ -39,4 +50,31 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add data/products.json
-          git commit -m "Update products.json from Sheet (auto)" || echo "No
+          git commit -m "Update products.json from Sheet (auto)" || echo "No changes"
+          git push
+
+  deploy:
+    needs: scrape
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    concurrency:
+      group: "pages"
+      cancel-in-progress: true
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: .
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
