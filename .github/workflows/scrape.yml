@@ -2,21 +2,23 @@ name: Scrape Temu -> products.json
 
 on:
   schedule:
-    - cron: '0 */6 * * *'          # каждые 6 часов
+    - cron: '0 */6 * * *'      # каждые 6 часов
   workflow_dispatch:
+
+permissions:
+  contents: write              # нужно для git commit/push
 
 jobs:
   scrape:
     runs-on: ubuntu-latest
+    timeout-minutes: 25
 
     env:
-      # укажи свой CSV с Google Sheets; если уже есть секрет — можно удалить эту строку
+      # Если используешь секреты — добавь SHEET_CSV_URL в Settings → Secrets → Actions
       SHEET_CSV_URL: ${{ secrets.SHEET_CSV_URL }}
-      # можно переопределить через Secrets
-      MAX_ROWS: ${{ secrets.MAX_ROWS ||  '120' }}
-      CONCURRENCY: ${{ secrets.CONCURRENCY || '4' }}
-      # Домен для RSS (например, Netlify)
-      SITE_URL: ${{ secrets.SITE_URL || 'https://capable-douhua-1a4c98.netlify.app' }}
+      MAX_ROWS:       ${{ secrets.MAX_ROWS || '120' }}
+      CONCURRENCY:    ${{ secrets.CONCURRENCY || '4' }}
+      SITE_URL:       ${{ secrets.SITE_URL || 'https://capable-douhua-1a4c98.netlify.app' }}
 
     steps:
       - name: Checkout
@@ -29,46 +31,49 @@ jobs:
         with:
           node-version: '20'
 
-      # Playwright нужен для переходов по редиректу Temu
-      - name: Install deps (playwright)
+      # Playwright для аккуратных переходов/редиректов Temu
+      - name: Install Playwright Chromium
         run: |
-          npm -v || true
           npx --yes playwright install --with-deps chromium
+
+      - name: Ensure data folder & empty JSON
+        run: |
+          mkdir -p data
+          [ -f data/products.json ] || echo "[]" > data/products.json
 
       - name: Run scraper
         run: node scraper/index.js
         env:
           SHEET_CSV_URL: ${{ env.SHEET_CSV_URL }}
-          MAX_ROWS: ${{ env.MAX_ROWS }}
-          CONCURRENCY: ${{ env.CONCURRENCY }}
+          MAX_ROWS:      ${{ env.MAX_ROWS }}
+          CONCURRENCY:   ${{ env.CONCURRENCY }}
 
-      - name: Show first 10 lines of products.json
+      - name: Debug CSV / JSON head
         run: |
-          echo "------ data/products.json (head) ------"
+          echo "----- products.json (first 10 lines) -----"
           head -n 10 data/products.json || true
-          echo "---------------------------------------"
+          echo "-----------------------------------------"
 
-      # Собираем RSS из products.json
+      # RSS из products.json без npm — напрямую через node (esm .mjs)
       - name: Build RSS
         run: |
-          npm ci || true
-          SITE_URL="${{ env.SITE_URL }}" npm run build:rss
+          SITE_URL="${{ env.SITE_URL }}" node scripts/build-rss.mjs
 
-      # Коммитим изменения (products.json и feed.xml)
       - name: Commit updated artifacts
         run: |
-          git config user.name "github-actions[bot]"
+          git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add data/products.json feed.xml
           if ! git diff --cached --quiet; then
             git commit -m "Update products.json & feed.xml (auto)"
+            # на случай гонки коммитов
             git pull --rebase
             git push
           else
             echo "No changes to commit"
           fi
 
-      # Дергаем Netlify билд-хук — ТВОЙ РЕАЛЬНЫЙ (ты его прислал)
+      # ТВОЙ реальный Netlify build hook (из сообщения)
       - name: Trigger Netlify build
         if: always()
         run: curl -X POST -d '{}' "https://api.netlify.com/build_hooks/68bd26bfa107607248f27a64"
@@ -77,5 +82,5 @@ jobs:
     needs: scrape
     runs-on: ubuntu-latest
     steps:
-      - name: Done
-        run: echo "Deploy will be handled by Netlify build hook."
+      - name: Netlify will deploy
+        run: echo "Deploy handled by Netlify build hook."
