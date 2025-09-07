@@ -1,34 +1,91 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>Moodette — curated finds</title>
-  <meta name="description" content="Moodette — curated Pinterest-friendly finds with Temu affiliate links."/>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./assets/style.css"/>
-  <meta name="robots" content="index,follow"/>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Moodette — Pinterest Finds</title>
+  <link rel="preconnect" href="https://temu.to">
+  <link rel="dns-prefetch" href="https://temu.to">
+  <link rel="preconnect" href="https://www.temu.com">
+  <link rel="dns-prefetch" href="https://www.temu.com">
+  <link rel="stylesheet" href="assets/style.css">
 </head>
 <body>
-  <header class="header container">
-    <div class="brand" id="brand">Moodette</div>
-    <nav class="nav">
-      <a href="#home">Home</a>
-      <a href="#catalog">Catalog</a>
-      <a href="#about">About</a>
-    </nav>
+  <header class="wrap">
+    <h1>Moodette</h1>
+    <p class="sub">Curated Temu finds for your Pinterest boards</p>
   </header>
 
-  <main id="app" class="container">
-    <noscript>Please enable JavaScript to view the catalog.</noscript>
+  <main class="wrap">
+    <div id="grid" class="grid"></div>
+    <template id="card-tpl">
+      <article class="card">
+        <div class="thumb"></div>
+        <div class="body">
+          <h3 class="title"></h3>
+          <div class="meta">
+            <span class="price"></span>
+            <span class="pill cat"></span>
+          </div>
+          <a class="btn-go" target="_blank" rel="nofollow noopener sponsored">Go to Temu</a>
+        </div>
+      </article>
+    </template>
   </main>
 
-  <footer class="footer container">
-    *This site contains Temu affiliate links (rel=&quot;sponsored&quot;). I may earn a commission from qualifying purchases.
-  </footer>
+  <script type="module">
+    async function getData() {
+      const res = await fetch('data/products.json', {cache:'no-store'});
+      if (!res.ok) return [];
+      return res.json();
+    }
 
-  <script src="./assets/app.js" defer></script>
+    const grid = document.getElementById('grid');
+    const tpl  = document.getElementById('card-tpl');
+
+    const fmtPrice = v => v ? `$${(+v).toFixed(2)}` : '';
+
+    function renderItem(item){
+      const el = tpl.content.cloneNode(true);
+      const card = el.querySelector('.card');
+      const thumb = el.querySelector('.thumb');
+      const title = el.querySelector('.title');
+      const price = el.querySelector('.price');
+      const cat   = el.querySelector('.cat');
+      const btn   = el.querySelector('.btn-go');
+
+      if (item.image){
+        const img = new Image();
+        img.src = item.image;
+        img.alt = item.title || item.id;
+        img.loading = 'lazy';
+        thumb.appendChild(img);
+      } else {
+        const sk = document.createElement('div');
+        sk.className = 'skeleton';
+        sk.textContent = item.id;
+        thumb.classList.add('thumb--empty');
+        thumb.appendChild(sk);
+      }
+
+      title.textContent = item.title || `Temu link — ${item.id}`;
+      price.textContent = fmtPrice(item.price);
+      cat.textContent   = (item.category || 'mixed').replace('-', ' ');
+      // ВАЖНО: всегда ссылка, а не button. И ведём на промежуточную go.html
+      btn.href = `/go.html?id=${encodeURIComponent(item.id)}`;
+
+      // по клику на саму карточку — тоже открыть
+      card.addEventListener('click', (e) => {
+        if (!e.target.closest('a')) window.open(btn.href, '_blank', 'noopener');
+      });
+
+      return el;
+    }
+
+    (async () => {
+      const items = await getData();
+      items.slice(0, 200).forEach(it => grid.appendChild(renderItem(it)));
+    })();
+  </script>
 </body>
 </html>
