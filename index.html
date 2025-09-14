@@ -1,55 +1,118 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Moodette</title>
-  <link rel="stylesheet" href="assets/styles.css">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Moodette — Pinterest Finds</title>
 
-  <!-- ✅ Plausible Analytics -->
+  <!-- ускоряем переходы на Temu -->
+  <link rel="preconnect" href="https://temu.to">
+  <link rel="dns-prefetch" href="https://temu.to">
+  <link rel="preconnect" href="https://www.temu.com">
+  <link rel="dns-prefetch" href="https://www.temu.com">
+
+  <!-- стили -->
+  <link rel="stylesheet" href="assets/style.css">
+
+  <!-- Plausible (замени домен на свой, если подключишь кастомный) -->
   <script defer data-domain="capable-douhua-1a4c98.netlify.app" src="https://plausible.io/js/script.js"></script>
 </head>
 <body>
-  <div class="container">
+  <header class="wrap">
     <h1>Moodette</h1>
-    <p>Curated Temu finds for your Pinterest boards</p>
+    <p class="sub">Curated Temu finds for your Pinterest boards</p>
+  </header>
 
-    <div id="products" class="grid"></div>
-  </div>
+  <main class="wrap">
+    <div id="grid" class="grid"></div>
 
-  <script>
-    async function loadProducts() {
-      try {
-        const res = await fetch("data/products.json");
-        const products = await res.json();
+    <!-- шаблон карточки -->
+    <template id="card-tpl">
+      <article class="card">
+        <div class="thumb"></div>
+        <div class="body">
+          <h3 class="title"></h3>
+          <div class="meta">
+            <span class="pill cat"></span>
+          </div>
+          <!-- КНОПКА: оранжевая, новый текст -->
+          <a class="btn btn-temu" target="_blank" rel="nofollow noopener sponsored">Get It on Temu</a>
+        </div>
+      </article>
+    </template>
+  </main>
 
-        const container = document.getElementById("products");
-        container.innerHTML = "";
-
-        products.forEach(p => {
-          const card = document.createElement("div");
-          card.className = "card";
-
-          card.innerHTML = `
-            <img src="${p.image || 'assets/placeholder.jpg'}" alt="${p.title}">
-            <h3>${p.title || 'Temu product'}</h3>
-            <p class="tag">${p.category || 'mixed'}</p>
-            <a class="btn"
-               href="go.html?url=${encodeURIComponent(p.link)}"
-               target="_blank"
-            >
-              Go to Temu
-            </a>
-          `;
-
-          container.appendChild(card);
-        });
-      } catch (err) {
-        console.error("Error loading products.json", err);
-      }
+  <script type="module">
+    async function getData() {
+      const res = await fetch('data/products.json', { cache: 'no-store' });
+      if (!res.ok) return [];
+      return res.json();
     }
 
-    loadProducts();
+    const grid = document.getElementById('grid');
+    const tpl  = document.getElementById('card-tpl');
+
+    function trackTemuClick(id, title) {
+      if (window.plausible) plausible('temu_click', { props: { id, title }});
+    }
+
+    function renderItem(item) {
+      const el = tpl.content.cloneNode(true);
+      const card = el.querySelector('.card');
+      const thumb = el.querySelector('.thumb');
+      const title = el.querySelector('.title');
+      const cat   = el.querySelector('.cat');
+      const btn   = el.querySelector('.btn');
+
+      // изображение / плейсхолдер
+      if (item.image) {
+        const img = new Image();
+        img.src = item.image;
+        img.alt = item.title || item.id || 'Temu product';
+        img.loading = 'lazy';
+        thumb.appendChild(img);
+      } else {
+        const ph = document.createElement('div');
+        ph.style.height = '220px';
+        ph.style.display = 'flex';
+        ph.style.alignItems = 'center';
+        ph.style.justifyContent = 'center';
+        ph.style.background = '#f3f3f3';
+        ph.style.color = '#8b8b8b';
+        ph.style.fontWeight = '600';
+        ph.textContent = item.title || item.id || 'Temu product';
+        thumb.appendChild(ph);
+      }
+
+      title.textContent = item.title || `Temu link — ${item.id}`;
+      cat.textContent   = (item.category || 'mixed').replace('-', ' ');
+
+      // целевая ссылка: affiliate_url > temu.to/k/{id}
+      const targetUrl = item.affiliate_url && item.affiliate_url.startsWith('http')
+        ? item.affiliate_url
+        : (item.id ? `https://temu.to/k/${encodeURIComponent(item.id)}` : 'https://temu.to');
+
+      // ведём через go.html?url=...
+      btn.href = `/go.html?url=${encodeURIComponent(targetUrl)}`;
+
+      // клики считаем
+      card.addEventListener('click', (e) => {
+        if (!e.target.closest('a')) {
+          trackTemuClick(item.id, item.title || '');
+          window.open(btn.href, '_blank', 'noopener');
+        }
+      });
+      btn.addEventListener('click', () => {
+        trackTemuClick(item.id, item.title || '');
+      });
+
+      return el;
+    }
+
+    (async () => {
+      const items = await getData();
+      items.forEach(it => grid.appendChild(renderItem(it))); // показываем ВСЁ
+    })();
   </script>
 </body>
 </html>
