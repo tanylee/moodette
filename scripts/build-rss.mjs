@@ -11,8 +11,12 @@ const products = JSON.parse(await fs.readFile(SRC, 'utf8')).slice(0, 100);
 
 const items = products.map(p=>{
   const title = esc(p.title || `Temu link — ${p.id}`);
-  const link  = `${SITE_URL}/go.html?id=${encodeURIComponent(p.id)}`;
-  const guid  = esc(p.id);
+  const target = p.affiliate_url && p.affiliate_url.startsWith('http')
+    ? p.affiliate_url
+    : (p.id ? `https://temu.to/k/${encodeURIComponent(p.id)}` : 'https://temu.to');
+  // ведём через go.html?url=...
+  const link  = `${SITE_URL}/go.html?url=${encodeURIComponent(target)}`;
+  const guid  = esc(p.id || target);
   const desc  = esc(p.category || 'mixed');
   return `
   <item>
