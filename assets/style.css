@@ -1,29 +1,100 @@
-/* Базовая кнопка */
-.btn {
+/* ============ Moodette base styles ============ */
+:root{
+  --bg:#faf8f7;
+  --text:#222222;
+  --muted:#8b8b8b;
+  --card:#ffffff;
+  --ring:#e9d6d1;
+  --shadow:0 1px 0 rgba(0,0,0,.04), 0 12px 28px rgba(0,0,0,.06);
+
+  /* Temu orange */
+  --temu-orange:#ff6a00;
+  --temu-orange-hover:#e85f00;
+  --temu-orange-press:#cc5400;
+}
+
+*{box-sizing:border-box}
+html,body{margin:0}
+body{
+  background:var(--bg);
+  color:var(--text);
+  font:16px/1.5 system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif;
+  -webkit-font-smoothing:antialiased;
+  text-rendering:optimizeLegibility;
+}
+
+.wrap{max-width:1180px;margin:0 auto;padding:18px}
+h1{margin:10px 0 4px;font-size:28px;font-weight:800;letter-spacing:.2px}
+.sub{margin:0 0 18px;color:var(--muted)}
+
+/* ============ Grid & Card ============ */
+.grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(260px,1fr));
+  gap:22px;
+}
+
+.card{
+  background:var(--card);
+  border-radius:18px;
+  box-shadow:var(--shadow);
+  overflow:hidden;
+  cursor:pointer;
+  transition:transform .12s ease, box-shadow .12s ease;
+}
+.card:hover{ transform:translateY(-2px); box-shadow:0 2px 0 rgba(0,0,0,.05), 0 18px 36px rgba(0,0,0,.09); }
+.card:focus-within{ outline:2px solid var(--ring); outline-offset:2px }
+
+/* image / thumb */
+.thumb{ position:relative; min-height:220px; background:#f3f3f3 }
+.thumb img{ width:100%; height:auto; display:block; }
+
+/* текст/мета */
+.body{ padding:16px }
+.title{ margin:0 0 8px; font-size:18px; line-height:1.25; font-weight:800 }
+.meta{ display:flex; gap:8px; align-items:center; margin:0 0 12px }
+.pill{ font-size:12px; background:#eee; color:#666; padding:4px 8px; border-radius:999px; white-space:nowrap }
+
+/* ============ Button ============ */
+.btn{
   display:inline-flex; align-items:center; justify-content:center;
   gap:.5rem;
-  padding:.9rem 1.1rem;
+  width:100%;
+  padding:14px 18px;
   border-radius:12px;
-  font-weight:700;
+  font-weight:800;
+  letter-spacing:.2px;
   text-decoration:none;
-  transition:transform .06s ease, box-shadow .2s ease, background .2s ease;
-  border:none;
-  cursor:pointer;
+  transition:background .12s ease, transform .06s ease, box-shadow .2s ease;
+  border:0; cursor:pointer;
 }
-
-/* Temu-оранжевый */
-:root {
-  --temu-orange: #ff6a00; /* близко к фирменному */
-  --temu-orange-hover: #e85f00;
-  --temu-orange-press: #cc5400;
-}
-
-.btn-temu {
-  background: var(--temu-orange);
+.btn-temu{
+  background:var(--temu-orange);
   color:#fff;
-  box-shadow: 0 6px 16px rgba(255,106,0,.25);
+  box-shadow:0 6px 16px rgba(255,106,0,.25);
+}
+.btn-temu:hover{ background:var(--temu-orange-hover) }
+.btn-temu:active{ background:var(--temu-orange-press); transform:translateY(1px) }
+.btn-temu:focus-visible{ outline:3px solid rgba(255,106,0,.35); outline-offset:2px }
+
+/* ============ Responsive ============ */
+@media (max-width: 640px){
+  .wrap{ padding:14px }
+  h1{ font-size:24px }
+  .grid{ gap:16px; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); }
+  .thumb{ min-height:200px }
 }
 
-.btn-temu:hover { background: var(--temu-orange-hover); }
-.btn-temu:active { background: var(--temu-orange-press); transform: translateY(1px); }
-.btn-temu:focus-visible { outline: 3px solid rgba(255,106,0,.35); outline-offset: 2px; }
+/* ============ Dark mode (optional) ============ */
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#151314;
+    --text:#ececec;
+    --muted:#a7a7a7;
+    --card:#1e1b1c;
+    --ring:#3a2f2c;
+    --shadow:0 0 0 rgba(0,0,0,0), 0 20px 40px rgba(0,0,0,.45);
+  }
+  .thumb{ background:#2a2627 }
+  .pill{ background:#2b2728; color:#a7a7a7 }
+}
