@@ -1,18 +1,43 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Temu Picks</title>
-  <link rel="stylesheet" href="./styles.css">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Moodette — Temu Picks</title>
+  <meta name="theme-color" content="#FF6A00" />
+  <link rel="stylesheet" href="./styles.css" />
   <script defer src="./app.js"></script>
+  <!-- (опц.) Аналитика Plausible:
+  <script defer data-domain="yourdomain.com" src="https://plausible.io/js/script.js"></script>
+  -->
 </head>
 <body>
   <header class="container">
-    <h1>Temu Picks</h1>
+    <h1>Moodette — Temu Picks</h1>
+    <p class="sub">Curated finds. Affiliate links.</p>
     <nav id="cats" class="chips"></nav>
   </header>
-  <main class="container"><div id="grid" class="grid"></div></main>
+
+  <main class="container">
+    <div id="grid" class="grid"></div>
+  </main>
+
   <footer class="container foot">Affiliate links — we may earn a commission.</footer>
+
+  <!-- Небольшой скрипт для подсветки активной категории (оранжевой) -->
+  <script>
+    function updateActiveChip(){
+      const nav = document.getElementById('cats');
+      if(!nav || !nav.children.length){ requestAnimationFrame(updateActiveChip); return; }
+      [...nav.querySelectorAll('a')].forEach(a => a.classList.remove('active'));
+      const m = location.hash.match(/#\/niche\/(.+)$/);
+      if(m){
+        const a = nav.querySelector(`a[href="#/niche/${m[1]}"]`);
+        if(a) a.classList.add('active');
+      }
+    }
+    addEventListener('hashchange', updateActiveChip);
+    addEventListener('load', updateActiveChip);
+  </script>
 </body>
 </html>
