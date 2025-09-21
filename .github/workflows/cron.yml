@@ -3,9 +3,8 @@ name: Temu Feed (Sheet only)
 on:
   schedule:
     - cron: '0 */3 * * *'   # каждые 3 часа
-  workflow_dispatch: {}      # ручной запуск из вкладки Actions
+  workflow_dispatch: {}      # ручной запуск
 
-# не позволяем параллельным запускам пересекаться
 concurrency:
   group: temu-feed
   cancel-in-progress: true
@@ -37,7 +36,7 @@ jobs:
 
       - name: Scrape & build CSV
         env:
-          SHEET_CSV_URL: ${{ secrets.SHEET_CSV_URL }}   # можно не задавать — в коде есть дефолт
+          SHEET_CSV_URL: ${{ secrets.SHEET_CSV_URL }}   # можно не задавать — в коде дефолт
           MAX_ROWS: ${{ vars.MAX_ROWS }}
           CONCURRENCY: ${{ vars.CONCURRENCY }}
           RECHECK_EXISTING: ${{ vars.RECHECK_EXISTING }}
@@ -58,8 +57,11 @@ jobs:
           git push
 
       - name: Trigger Netlify (optional)
-        if: ${{ secrets.NETLIFY_BUILD_HOOK_URL != '' }}
         env:
           NETLIFY_BUILD_HOOK_URL: ${{ secrets.NETLIFY_BUILD_HOOK_URL }}
         run: |
-          curl -X POST "$NETLIFY_BUILD_HOOK_URL"
+          if [ -n "$NETLIFY_BUILD_HOOK_URL" ]; then
+            curl -X POST "$NETLIFY_BUILD_HOOK_URL";
+          else
+            echo "NETLIFY_BUILD_HOOK_URL not set — skipping";
+          fi
