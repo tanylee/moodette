@@ -1,0 +1,10 @@
+:root{--gap:16px;--brand:#ff6a00}
+body{margin:0;font-family:Inter,sans-serif;background:#fafafa;color:#111}
+.container{max-width:1100px;margin:0 auto;padding:16px}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0 16px}
+.chips a{padding:8px 12px;border:1px solid #ddd;border-radius:999px;text-decoration:none;color:#333;font-size:13px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:var(--gap)}
+.card{background:#fff;border:1px solid #eee;border-radius:14px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.04);display:flex;flex-direction:column}
+.card img{width:100%;aspect-ratio:1/1;object-fit:cover;background:#f2f2f2}
+.meta{padding:12px}
+.btn-temu{display:inline-block;text-align:center;padding:10px 14px;border-radius:10px;text-decoration:none;font-weight:700;background:var(--brand);color:#fff}
