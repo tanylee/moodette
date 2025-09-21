@@ -2,8 +2,8 @@ name: Temu Feed (Sheet only)
 
 on:
   schedule:
-    - cron: '0 */3 * * *'   # каждые 3 часа
-  workflow_dispatch: {}      # ручной запуск
+    - cron: '0 */3 * * *'
+  workflow_dispatch: {}
 
 concurrency:
   group: temu-feed
@@ -27,15 +27,30 @@ jobs:
           cache: 'npm'
           cache-dependency-path: package-lock.json
 
-      - name: Install deps (deterministic)
-        run: npm ci
+      - name: Env info
+        run: |
+          node -v
+          npm -v
+          test -f package.json && echo "package.json OK" || (echo "NO package.json" && exit 1)
+          test -f package-lock.json && echo "lockfile OK" || echo "NO lockfile (fallback to npm i)"
+
+      - name: Install deps (robust)
+        env:
+          # избегаем падений на конфликтующих peer deps
+          NPM_CONFIG_LEGACY_PEER_DEPS: true
+        run: |
+          if [ -f package-lock.json ]; then
+            npm ci || npm i --no-audit --no-fund --legacy-peer-deps
+          else
+            npm i --no-audit --no-fund --legacy-peer-deps
+          fi
 
       - name: Install Playwright Chromium
         run: npx playwright install --with-deps chromium
 
       - name: Scrape & build CSV
         env:
-          SHEET_CSV_URL: ${{ secrets.SHEET_CSV_URL }}   # можно не задавать — в коде есть дефолт
+          SHEET_CSV_URL: ${{ secrets.SHEET_CSV_URL }}
           MAX_ROWS: ${{ vars.MAX_ROWS }}
           CONCURRENCY: ${{ vars.CONCURRENCY }}
           RECHECK_EXISTING: ${{ vars.RECHECK_EXISTING }}
