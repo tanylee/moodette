@@ -20,23 +20,22 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Node
+      - name: Setup Node (with npm cache)
         uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
+          cache-dependency-path: package-lock.json
 
-      - name: Install deps (with fallback)
-        run: |
-          npm ci || npm i --no-audit --no-fund
+      - name: Install deps (deterministic)
+        run: npm ci
 
       - name: Install Playwright Chromium
-        run: |
-          npx playwright install --with-deps chromium
+        run: npx playwright install --with-deps chromium
 
       - name: Scrape & build CSV
         env:
-          SHEET_CSV_URL: ${{ secrets.SHEET_CSV_URL }}   # можно не задавать — в коде дефолт
+          SHEET_CSV_URL: ${{ secrets.SHEET_CSV_URL }}   # можно не задавать — в коде есть дефолт
           MAX_ROWS: ${{ vars.MAX_ROWS }}
           CONCURRENCY: ${{ vars.CONCURRENCY }}
           RECHECK_EXISTING: ${{ vars.RECHECK_EXISTING }}
