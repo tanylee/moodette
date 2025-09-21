@@ -1,21 +1,54 @@
 name: Temu Feed (Sheet only)
+
 on:
   schedule:
-    - cron: '0 */3 * * *'
-  workflow_dispatch: {}
+    - cron: '0 */3 * * *'   # каждые 3 часа
+  workflow_dispatch: {}      # ручной запуск из вкладки Actions
+
+# не позволяем параллельным запускам пересекаться
+concurrency:
+  group: temu-feed
+  cancel-in-progress: true
+
 jobs:
   scrape:
     runs-on: ubuntu-latest
-    permissions: { contents: write }
+    timeout-minutes: 20
+    permissions:
+      contents: write
+
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with: { node-version: '20' }
-      - run: npm ci
-      - name: Scrape & Pins
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install deps (with fallback)
+        run: |
+          npm ci || npm i --no-audit --no-fund
+
+      - name: Install Playwright Chromium
+        run: |
+          npx playwright install --with-deps chromium
+
+      - name: Scrape & build CSV
+        env:
+          SHEET_CSV_URL: ${{ secrets.SHEET_CSV_URL }}   # можно не задавать — в коде есть дефолт
+          MAX_ROWS: ${{ vars.MAX_ROWS }}
+          CONCURRENCY: ${{ vars.CONCURRENCY }}
+          RECHECK_EXISTING: ${{ vars.RECHECK_EXISTING }}
+          REDIRECT_TIMEOUT: ${{ vars.REDIRECT_TIMEOUT }}
+          FETCH_TIMEOUT: ${{ vars.FETCH_TIMEOUT }}
+          PINS_PER_DAY: ${{ vars.PINS_PER_DAY }}
+          DEFAULT_BOARD: ${{ vars.DEFAULT_BOARD }}
         run: |
           npm run scrape
           npm run pins
+
       - name: Commit feed
         run: |
           git config user.name github-actions
@@ -23,8 +56,10 @@ jobs:
           git add public/data/products.json data/pins.csv || true
           git diff --cached --quiet || git commit -m "update feed $(date -u +'%Y-%m-%dT%H:%M:%SZ')"
           git push
-      - name: Trigger Netlify
+
+      - name: Trigger Netlify (optional)
+        if: ${{ secrets.NETLIFY_BUILD_HOOK_URL != '' }}
         env:
           NETLIFY_BUILD_HOOK_URL: ${{ secrets.NETLIFY_BUILD_HOOK_URL }}
         run: |
-          if [ -n "$NETLIFY_BUILD_HOOK_URL" ]; then curl -X POST "$NETLIFY_BUILD_HOOK_URL"; fi
+          curl -X POST "$NETLIFY_BUILD_HOOK_URL"
