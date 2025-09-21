@@ -1,6 +1,6 @@
 import 'dotenv/config';
 import { chromium, devices } from 'playwright';
-import Papa from 'papaparse';                  // ⬅️ default import
+import Papa from 'papaparse';
 import { request } from 'undici';
 import fs from 'fs/promises';
 import path from 'path';
@@ -22,6 +22,9 @@ const PUBLIC = path.join(ROOT, 'public');
 const PRODUCTS_PATH = path.join(PUBLIC, 'data', 'products.json');
 const CATEGORIES_PATH = path.join(PUBLIC, 'config', 'categories.json');
 
+const UA_MOBILE =
+  'Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/604.1';
+
 async function ensureDirs(){ await fs.mkdir(path.dirname(PRODUCTS_PATH), { recursive: true }); }
 async function readJSON(p){ try { return JSON.parse(await fs.readFile(p, 'utf8')); } catch { return null; } }
 async function writeJSON(p, d){ await fs.writeFile(p, JSON.stringify(d, null, 2)); }
@@ -29,112 +32,4 @@ async function writeJSON(p, d){ await fs.writeFile(p, JSON.stringify(d, null, 2)
 async function sheetRows(){
   const { body } = await request(SHEET_CSV_URL, { maxRedirections: 1 });
   const csv = await body.text();
-  const parsed = Papa.parse(csv, { header: false, skipEmptyLines: true });   // ⬅️ use Papa.parse
-  return parsed.data
-    .map(row => ({
-      url: String(row?.[0] || '').trim(),
-      prefCat: String(row?.[1] || '').trim() || null
-    }))
-    .filter(r => r.url)
-    .slice(0, MAX_ROWS);
-}
-
-function isGoodsUrl(u){ return /temu\.com\/goods\.html\?/.test(u); }
-function getGoodsIdFromUrl(u){ const m=/goods_id=(\d{10,})/.exec(u); return m?m[1]:null; }
-
-async function resolveWithBrowser(url,page){
-  await page.route('**/*', r=>{
-    const u=r.request().url();
-    if(/install|app-redirect|umeng|byteoversea|gtm|analytics/.test(u)) return r.abort();
-    r.continue();
-  });
-  await page.goto(url,{timeout:REDIRECT_TIMEOUT,waitUntil:'domcontentloaded'}).catch(()=>null);
-  return await page.evaluate(()=>{
-    const m = document.documentElement.innerHTML.match(/goods_id=(\d{10,})/);
-    return m ? m[1] : null;
-  });
-}
-
-async function extractProduct(goodsUrl,page){
-  await page.goto(goodsUrl,{timeout:FETCH_TIMEOUT,waitUntil:'domcontentloaded'});
-  await page.waitForTimeout(400);
-  return await page.evaluate(() => {
-    const title = document.querySelector('h1, [data-test-id="product-title"], title')?.textContent?.trim() || '';
-    const price = document.querySelector('[data-test-id="price"], .price, .product-price')?.textContent?.replace(/[^0-9.,]/g,'') || '';
-    const imgs = [...document.querySelectorAll('img[src*="media"]')].map(i=>i.src).slice(0,5);
-    const html = document.documentElement.innerHTML.toLowerCase();
-    const textHasSoldOut = /sold\s*out|out\s*of\s*stock|unavailable/.test(html);
-    const hasBuyBtn = !!document.querySelector('[data-test-id*="buy"], [data-test-id*="cart"]');
-    const disabledBtn = !!document.querySelector('button[disabled], button[aria-disabled="true"]');
-    return { title, price, images: imgs, available: !textHasSoldOut && (hasBuyBtn || !!price) && !disabledBtn };
-  });
-}
-
-function heuristicCategory(categories,title, pref){
-  if (pref && categories.some(c=>c.slug===pref)) return pref;
-  const t=(title||'').toLowerCase();
-  for (const c of categories){ if (c.keywords.some(k=>t.includes(k))) return c.slug; }
-  return categories[0]?.slug || 'room-decor';
-}
-
-function makeOutbound(id){ return `https://www.temu.com/goods.html?goods_id=${id}`; }
-
-async function main(){
-  await ensureDirs();
-  const existing=(await readJSON(PRODUCTS_PATH))||[];
-  const byId=new Map(existing.map(x=>[String(x.id),x]));
-  const categories=(await readJSON(CATEGORIES_PATH))||[];
-  const rows=await sheetRows();
-
-  const browser=await chromium.launch({headless:true});
-  const ctx=await browser.newContext({...MOBILE});
-  const page=await ctx.newPage();
-
-  // новые/обновления из шита
-  const newTasks=rows.map(r=>(async()=>{
-    try{
-      let gid=isGoodsUrl(r.url)?getGoodsIdFromUrl(r.url):await resolveWithBrowser(r.url,page);
-      if(!gid) return null;
-      const meta=await extractProduct(makeOutbound(gid),page);
-      const prev=byId.get(String(gid))||{};
-      byId.set(String(gid),{
-        id:String(gid),
-        title:meta.title||prev.title||`Temu Item ${gid}`,
-        slug:prev.slug||slugify(meta.title||`Temu Item ${gid}`,{lower:true,strict:true}),
-        category:heuristicCategory(categories,meta.title||prev.title||'',r.prefCat),
-        price:meta.price||prev.price||'',
-        images:meta.images?.length?meta.images:prev.images||[],
-        out_url:makeOutbound(gid),
-        available:meta.available,
-        added_at:prev.added_at||Date.now(),
-        updated_at:Date.now(),
-        checks:(prev.checks||0)+1
-      });
-    }catch{/* skip */}
-  })());
-  for(let i=0;i<newTasks.length;i+=CONCURRENCY){ await Promise.all(newTasks.slice(i,i+CONCURRENCY)); }
-
-  // частичный re-check старых
-  const rePool=[...byId.values()].sort((a,b)=>(a.updated_at||0)-(b.updated_at||0)).slice(0,RECHECK_EXISTING);
-  const reTasks=rePool.map(item=>(async()=>{
-    try{
-      const meta=await extractProduct(makeOutbound(item.id),page);
-      byId.set(item.id,{
-        ...item,
-        title:meta.title||item.title,
-        price:meta.price||item.price,
-        images:meta.images?.length?meta.images:item.images,
-        available:meta.available,
-        updated_at:Date.now(),
-        checks:(item.checks||0)+1
-      });
-    }catch{/* skip */}
-  })());
-  for(let i=0;i<reTasks.length;i+=CONCURRENCY){ await Promise.all(reTasks.slice(i,i+CONCURRENCY)); }
-
-  await browser.close();
-  await writeJSON(PRODUCTS_PATH,[...byId.values()].sort((a,b)=>b.updated_at-a.updated_at));
-  console.log(`[scrape] total ${byId.size}`);
-}
-
-main().catch(e=>{ console.error(e); process.exit(1); });
+  const parsed = Papa.parse(csv, { header: false, skipEmptyLines:
