@@ -1,0 +1,18 @@
+{
+  "name": "temu-pinterest-automation",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "scrape": "node ./scripts/scrape.mjs",
+    "pins": "node ./scripts/pinterest.mjs",
+    "dev": "npx serve ./public -l 4173"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "papaparse": "^5.4.1",
+    "playwright": "^1.47.2",
+    "slugify": "^1.6.6",
+    "undici": "^6.19.8"
+  }
+}
