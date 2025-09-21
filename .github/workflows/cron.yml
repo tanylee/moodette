@@ -1,0 +1,30 @@
+name: Temu Feed (Sheet only)
+on:
+  schedule:
+    - cron: '0 */3 * * *'
+  workflow_dispatch: {}
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    permissions: { contents: write }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '20' }
+      - run: npm ci
+      - name: Scrape & Pins
+        run: |
+          npm run scrape
+          npm run pins
+      - name: Commit feed
+        run: |
+          git config user.name github-actions
+          git config user.email actions@users.noreply.github.com
+          git add public/data/products.json data/pins.csv || true
+          git diff --cached --quiet || git commit -m "update feed $(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+          git push
+      - name: Trigger Netlify
+        env:
+          NETLIFY_BUILD_HOOK_URL: ${{ secrets.NETLIFY_BUILD_HOOK_URL }}
+        run: |
+          if [ -n "$NETLIFY_BUILD_HOOK_URL" ]; then curl -X POST "$NETLIFY_BUILD_HOOK_URL"; fi
