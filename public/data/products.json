@@ -1,5 +1,18 @@
 [
   {
+    "id": "601099528957259",
+    "title": "This item was discontinued - Temu",
+    "slug": "temu-or-explore-the-latest-clothing-beauty-home-jewelry-and-more",
+    "category": "pastel-decor",
+    "price": "",
+    "images": [],
+    "out_url": "https://temu.to/k/gqyahx1fzfo",
+    "available": false,
+    "added_at": 1758575409074,
+    "updated_at": 1758640326320,
+    "checks": 3
+  },
+  {
     "id": "601099712996845",
     "title": "Temu | Explore the Latest Clothing, Beauty, Home, Jewelry & More",
     "slug": "crocodile-pattern-tote-bag-large-capacity-tote-bag-zipper-temu",
@@ -89,19 +102,6 @@
     "added_at": 1758565130348,
     "updated_at": 1758597996378,
     "checks": 5
-  },
-  {
-    "id": "601099528957259",
-    "title": "Temu | Explore the Latest Clothing, Beauty, Home, Jewelry & More",
-    "slug": "temu-or-explore-the-latest-clothing-beauty-home-jewelry-and-more",
-    "category": "pastel-decor",
-    "price": "",
-    "images": [],
-    "out_url": "https://temu.to/k/gqyahx1fzfo",
-    "available": false,
-    "added_at": 1758575409074,
-    "updated_at": 1758575472049,
-    "checks": 2
   },
   {
     "id": "601100367097162",
