@@ -1,5 +1,18 @@
 [
   {
+    "id": "601100367097162",
+    "title": "Temu | Explore the Latest Clothing, Beauty, Home, Jewelry & More",
+    "slug": "temu-or-explore-the-latest-clothing-beauty-home-jewelry-and-more",
+    "category": "pastel-decor",
+    "price": "",
+    "images": [],
+    "out_url": "https://temu.to/k/gv00zkuzx63",
+    "available": false,
+    "added_at": 1758441663851,
+    "updated_at": 1758651513719,
+    "checks": 6
+  },
+  {
     "id": "601099528957259",
     "title": "This item was discontinued - Temu",
     "slug": "temu-or-explore-the-latest-clothing-beauty-home-jewelry-and-more",
@@ -102,19 +115,6 @@
     "added_at": 1758565130348,
     "updated_at": 1758597996378,
     "checks": 5
-  },
-  {
-    "id": "601100367097162",
-    "title": "Temu | Explore the Latest Clothing, Beauty, Home, Jewelry & More",
-    "slug": "temu-or-explore-the-latest-clothing-beauty-home-jewelry-and-more",
-    "category": "pastel-decor",
-    "price": "",
-    "images": [],
-    "out_url": "https://temu.to/k/gv00zkuzx63",
-    "available": false,
-    "added_at": 1758441663851,
-    "updated_at": 1758565191034,
-    "checks": 4
   },
   {
     "id": "601099558603838",
