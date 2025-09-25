@@ -1,5 +1,18 @@
 [
   {
+    "id": "601099526564919",
+    "title": "Temu | Explore the Latest Clothing, Beauty, Home, Jewelry & More",
+    "slug": "temu-or-explore-the-latest-clothing-beauty-home-jewelry-and-more",
+    "category": "pastel-decor",
+    "price": "",
+    "images": [],
+    "out_url": "https://temu.to/k/gqx2h8kt6p6",
+    "available": false,
+    "added_at": 1758502683235,
+    "updated_at": 1758813210585,
+    "checks": 4
+  },
+  {
     "id": "601099773659385",
     "title": "Temu | Explore the Latest Clothing, Beauty, Home, Jewelry & More",
     "slug": "12pcs-hair-styling-tools-set-sleeping-hair-roller-face-temu",
@@ -231,19 +244,6 @@
     "available": false,
     "added_at": 1758522000113,
     "updated_at": 1758522061474,
-    "checks": 2
-  },
-  {
-    "id": "601099526564919",
-    "title": "Temu | Explore the Latest Clothing, Beauty, Home, Jewelry & More",
-    "slug": "temu-or-explore-the-latest-clothing-beauty-home-jewelry-and-more",
-    "category": "pastel-decor",
-    "price": "",
-    "images": [],
-    "out_url": "https://temu.to/k/gqx2h8kt6p6",
-    "available": false,
-    "added_at": 1758502683235,
-    "updated_at": 1758502683891,
     "checks": 2
   },
   {
